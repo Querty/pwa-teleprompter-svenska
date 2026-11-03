@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>Svenska Teleprompter</title>
+
+    <!-- PWA & Mobile Meta Tags -->
+    <meta name="theme-color" content="#000000" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+
+    <!-- INLINE DATA-URI MANIFEST -->
+    <link rel="manifest" href="manifest.json" />
+
+    <style>
+      :root {
+        --bg: #000000;
+        --dim-text: rgba(255, 255, 255, 0.28);
+        --passed-text: rgba(255, 255, 255, 0.55);
+        --active-text: #ffffff;
+        --accent: #2563eb;
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: var(--bg);
+        color: var(--active-text);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+        overflow: hidden;
+      }
+
+      /* Input View */
+      #inputView {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        padding: 24px;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 1.5rem;
+        margin: 0 0 16px 0;
+        font-weight: 600;
+      }
+      textarea {
+        flex: 1;
+        width: 100%;
+        background: #121212;
+        border: 1px solid #27272a;
+        border-radius: 12px;
+        color: #fff;
+        padding: 16px;
+        font-size: 1.05rem;
+        resize: none;
+        outline: none;
+        line-height: 1.6;
+      }
+      textarea:focus {
+        border-color: #52525b;
+      }
+      .toolbar {
+        display: flex;
+        gap: 10px;
+        margin-top: 14px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      button {
+        background: #27272a;
+        border: none;
+        color: #fff;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.15s ease;
+      }
+      button:active {
+        background: #3f3f46;
+      }
+      button.primary {
+        background: #ffffff;
+        color: #000;
+        font-weight: 600;
+      }
+      button.primary:active {
+        background: #d4d4d8;
+      }
+      select {
+        background: #18181b;
+        border: 1px solid #27272a;
+        color: #fff;
+        padding: 11px 14px;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        outline: none;
+      }
+
+      /* Prompter View */
+      #prompterView {
+        display: none;
+        width: 100%;
+        height: 100%;
+        flex-direction: column;
+        justify-content: space-between;
+        position: relative;
+      }
+      #textStage {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 24px;
+        overflow-y: auto;
+        text-align: left;
+      }
+      #paragraphContainer {
+        max-width: 840px;
+        font-size: 1.85rem;
+        line-height: 1.7;
+        font-weight: 600;
+      }
+      @media (max-width: 600px) {
+        #paragraphContainer {
+          font-size: 1.45rem;
+          line-height: 1.6;
+        }
+      }
+
+      /* Spotify Lyrics Effect */
+      .sentence {
+        color: var(--dim-text);
+        cursor: pointer;
+        display: inline;
+        transition:
+          color 0.3s cubic-bezier(0.2, 0, 0, 1),
+          text-shadow 0.3s ease;
+        margin-right: 0.25em;
+      }
+      .sentence.passed {
+        color: var(--passed-text);
+      }
+      .sentence.active {
+        color: var(--active-text);
+        text-shadow:
+          0 0 16px rgba(255, 255, 255, 0.75),
+          0 0 32px rgba(255, 255, 255, 0.35);
+      }
+
+      /* Controls Dock */
+      .dock {
+        padding: 16px 24px;
+        background: rgba(10, 10, 10, 0.85);
+        backdrop-filter: blur(12px);
+        border-top: 1px solid #18181b;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .dock-group {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .icon-btn {
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+      }
+      #progressIndicator {
+        font-size: 0.85rem;
+        color: #71717a;
+        margin-right: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Input Mode -->
+    <div id="inputView">
+      <h1>Svenska Teleprompter</h1>
+      <textarea
+        id="textInput"
+        placeholder="Klistra in eller skriv din svenska text här..."
+      ></textarea>
+      <div class="toolbar">
+        <select id="voiceSelect">
+          <option value="">Laddar röster...</option>
+        </select>
+        <button class="primary" id="startBtn">Starta Läsning</button>
+        <button id="demoBtn">Exempel</button>
+        <button id="clearBtn">Rensa</button>
+      </div>
+    </div>
+
+    <!-- Prompter Mode -->
+    <div id="prompterView">
+      <div id="textStage">
+        <div id="paragraphContainer"></div>
+      </div>
+      <div class="dock">
+        <button class="icon-btn" id="exitBtn">✕ Avsluta</button>
+        <div class="dock-group">
+          <span id="progressIndicator">Stycke 1/1</span>
+          <button class="icon-btn" id="prevBtn">◀</button>
+          <button class="icon-btn primary" id="playPauseBtn">Pausa</button>
+          <button class="icon-btn" id="nextBtn">▶</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 1. Service Worker for PWA Offline Eligibility
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker
+          .register("./sw.js")
+          .then(() => console.log("SW registered"))
+          .catch((err) => console.error("SW registration failed:", err));
+      }
+
+      // 2. State & Speech Setup
+      const synth = window.speechSynthesis;
+      let swedishVoices = [];
+      let paragraphs = [];
+      let pIndex = 0;
+      let sIndex = 0;
+      let isPlaying = false;
+      let currentUtterance = null;
+
+      const inputView = document.getElementById("inputView");
+      const prompterView = document.getElementById("prompterView");
+      const textInput = document.getElementById("textInput");
+      const voiceSelect = document.getElementById("voiceSelect");
+      const paragraphContainer = document.getElementById("paragraphContainer");
+      const progressIndicator = document.getElementById("progressIndicator");
+      const playPauseBtn = document.getElementById("playPauseBtn");
+
+      function populateVoices() {
+        const voices = synth.getVoices();
+        swedishVoices = voices.filter((v) => v.lang.startsWith("sv"));
+        if (swedishVoices.length === 0) swedishVoices = voices; // Fallback to system voices
+
+        voiceSelect.innerHTML = "";
+        swedishVoices.forEach((voice, i) => {
+          const opt = document.createElement("option");
+          opt.value = i;
+          opt.textContent = `${voice.name} (${voice.lang})`;
+          voiceSelect.appendChild(opt);
+        });
+      }
+      populateVoices();
+      if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = populateVoices;
+      }
+
+      // Split text into safe sentences (Max 180 chars to avoid Android speech cutoff)
+      function splitSentences(paragraph) {
+        const regex = /[^.!?]+[.!?]+|\s*$/g;
+        const rawSentences = paragraph.match(regex) || [paragraph];
+        const safeSentences = [];
+
+        rawSentences.forEach((s) => {
+          const trimmed = s.trim();
+          if (!trimmed) return;
+          if (trimmed.length > 180) {
+            const parts = trimmed.split(/([,;:]|\s{4,})/);
+            let buf = "";
+            parts.forEach((p) => {
+              if ((buf + p).length > 180 && buf.trim()) {
+                safeSentences.push(buf.trim());
+                buf = p;
+              } else {
+                buf += p;
+              }
+            });
+            if (buf.trim()) safeSentences.push(buf.trim());
+          } else {
+            safeSentences.push(trimmed);
+          }
+        });
+        return safeSentences;
+      }
+
+      function renderCurrentParagraph() {
+        paragraphContainer.innerHTML = "";
+        const sentences = paragraphs[pIndex] || [];
+        sentences.forEach((text, i) => {
+          const span = document.createElement("span");
+          span.className = "sentence";
+          span.id = `s-${i}`;
+          span.textContent = text + " ";
+          span.addEventListener("click", () => jumpToSentence(i));
+          paragraphContainer.appendChild(span);
+        });
+        progressIndicator.textContent = `Stycke ${pIndex + 1}/${paragraphs.length}`;
+        updateHighlighting();
+      }
+
+      function updateHighlighting() {
+        const spans = paragraphContainer.querySelectorAll(".sentence");
+        spans.forEach((span, i) => {
+          span.classList.remove("active", "passed");
+          if (i === sIndex) span.classList.add("active");
+          else if (i < sIndex) span.classList.add("passed");
+        });
+      }
+
+      function speakCurrentSentence() {
+        synth.cancel();
+        if (!isPlaying) return;
+
+        const currentPara = paragraphs[pIndex];
+        if (!currentPara || sIndex >= currentPara.length) {
+          if (pIndex + 1 < paragraphs.length) {
+            pIndex++;
+            sIndex = 0;
+            renderCurrentParagraph();
+            speakCurrentSentence();
+          } else {
+            isPlaying = false;
+            playPauseBtn.textContent = "Spela igen";
+          }
+          return;
+        }
+
+        updateHighlighting();
+        const sentenceText = currentPara[sIndex];
+        currentUtterance = new SpeechSynthesisUtterance(sentenceText);
+
+        const selectedIndex = voiceSelect.value;
+        if (swedishVoices[selectedIndex]) {
+          currentUtterance.voice = swedishVoices[selectedIndex];
+          currentUtterance.lang = swedishVoices[selectedIndex].lang;
+        } else {
+          currentUtterance.lang = "sv-SE";
+        }
+
+        currentUtterance.onend = () => {
+          if (!isPlaying) return;
+          sIndex++;
+          speakCurrentSentence();
+        };
+
+        currentUtterance.onerror = (e) => {
+          if (e.error !== "interrupted" && e.error !== "canceled") {
+            sIndex++;
+            speakCurrentSentence();
+          }
+        };
+
+        synth.speak(currentUtterance);
+      }
+
+      function jumpToSentence(index) {
+        sIndex = index;
+        isPlaying = true;
+        playPauseBtn.textContent = "Pausa";
+        speakCurrentSentence();
+      }
+
+      // Controls
+      document.getElementById("startBtn").addEventListener("click", () => {
+        const text = textInput.value.trim();
+        if (!text) return;
+
+        const rawParagraphs = text.split(/\n+/).filter((p) => p.trim());
+        paragraphs = rawParagraphs
+          .map((p) => splitSentences(p))
+          .filter((p) => p.length > 0);
+        if (paragraphs.length === 0) return;
+
+        pIndex = 0;
+        sIndex = 0;
+        inputView.style.display = "none";
+        prompterView.style.display = "flex";
+        isPlaying = true;
+        playPauseBtn.textContent = "Pausa";
+        renderCurrentParagraph();
+        speakCurrentSentence();
+      });
+
+      playPauseBtn.addEventListener("click", () => {
+        if (isPlaying) {
+          isPlaying = false;
+          synth.cancel();
+          playPauseBtn.textContent = "Fortsätt";
+        } else {
+          isPlaying = true;
+          playPauseBtn.textContent = "Pausa";
+          speakCurrentSentence();
+        }
+      });
+
+      document.getElementById("nextBtn").addEventListener("click", () => {
+        if (sIndex + 1 < paragraphs[pIndex].length) {
+          sIndex++;
+        } else if (pIndex + 1 < paragraphs.length) {
+          pIndex++;
+          sIndex = 0;
+          renderCurrentParagraph();
+        }
+        speakCurrentSentence();
+      });
+
+      document.getElementById("prevBtn").addEventListener("click", () => {
+        if (sIndex > 0) {
+          sIndex--;
+        } else if (pIndex > 0) {
+          pIndex--;
+          sIndex = paragraphs[pIndex].length - 1;
+          renderCurrentParagraph();
+        }
+        speakCurrentSentence();
+      });
+
+      document.getElementById("exitBtn").addEventListener("click", () => {
+        isPlaying = false;
+        synth.cancel();
+        prompterView.style.display = "none";
+        inputView.style.display = "flex";
+      });
+
+      document.getElementById("clearBtn").addEventListener("click", () => {
+        textInput.value = "";
+        textInput.focus();
+      });
+
+      document.getElementById("demoBtn").addEventListener("click", () => {
+        textInput.value = `Välkommen till denna enkla teleprompter.\nDen läser din text en mening i taget med webbläsarens inbyggda röst.\n\nNär du startar visas texten på en mörk bakgrund precis som Spotify Lyrics. Du kan klicka på valfri mening för att hoppa dit direkt.`;
+      });
+    </script>
+  </body>
+</html>
